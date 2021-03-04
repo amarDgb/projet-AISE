@@ -61,6 +61,19 @@ void suppression(Liste *liste){
   }
 };
 
+// 4- Afficher la liste chaîner
+void afficherListe(Liste *liste){
+  if(liste == NULL){
+    exit(EXIT_FAILURE);
+  }
+  Element *actuel = liste->premier;
+  while(actuel != NULL){
+    printf("%s ->", actuel->elem);
+    actuel = actuel->suivant;
+  }
+  printf("NULL\n");
+};
+
 int main()
 {
 
