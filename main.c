@@ -47,6 +47,20 @@ void insertion(Liste *liste, char *nvElement){
   nouveau->suivant = liste->premier;
   liste->premier = nouveau;
 };
+
+// 3- Suppression d'un element d'une Liste (premier element)
+
+void suppression(Liste *liste){
+  if(liste == NULL){
+    exit(EXIT_FAILURE);
+  }
+  if(liste->premier != NULL){
+    Element *aSupprimer = liste->premier;
+    liste->premier = liste->premier->suivant;
+    free(aSupprimer);
+  }
+};
+
 int main()
 {
 
