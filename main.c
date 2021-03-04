@@ -5,6 +5,7 @@
 #include <sys/types.h>
 #include <string.h>  //strlen - strstr
 
+#define BUFSZ 1024
 
 typedef struct Element Element;
 struct Element{
@@ -73,6 +74,90 @@ void afficherListe(Liste *liste){
   }
   printf("NULL\n");
 };
+
+void processdir(const struct dirent *piddir, Liste *liste){
+    char path[BUFSZ];
+    char line[BUFSZ];
+    char line2[BUFSZ];
+    char *memstr;
+    char *memstr2;
+    FILE *pidmemfile;
+
+    if(liste == NULL){
+      exit(EXIT_FAILURE);
+    }
+    Element *actuel = liste->premier;
+    while(actuel != NULL){
+      // printf("%s ->", actuel->elem);  ------Test
+      int offset = strlen(actuel->elem);
+      char vmPeak[10]="";
+      strcat(vmPeak,actuel->elem);
+      actuel = actuel->suivant;
+      char vmSize[10]="";
+      strcat(vmSize,actuel->elem);
+      //printf("%s\n",vmPeak);  ------Test
+
+      //printf("%s ->", actuel->elem);   ------Test
+      int  offset2 = strlen(actuel->elem);
+
+
+      //strlen : calcul la longeur en nombre de caractère (ne prend pas en compte \0)
+      /* Construct full path of the file containt memory-info if this PID */
+      snprintf(path, BUFSZ, "/proc/%s/status", piddir->d_name);
+      /*
+        path -> tampon
+        size = BUFSZ -> nombre maximum d'octets qui seront écrit dans le tampon
+        /proc/%s/status = format -> chaine qui contient un format
+        piddir->d_name nom du répertoire
+      */
+
+      /* ouverture du fichier */
+      pidmemfile = fopen(path, "r"); //Rq: j'ai enlever rt -> r
+
+      /* Read line-by-line until we found the line we want */
+          while (1) {
+
+                int ret = fgets(line, BUFSZ, pidmemfile);
+                int ret2 = fgets(line2, BUFSZ, pidmemfile);
+                if(ret == NULL){
+                  if(feof(pidmemfile)){
+                    break;
+                  }else{
+                    perror("fgets");
+                    return 1;
+                  }
+                }
+
+              memstr = strstr(line,vmPeak);
+
+              memstr2 = strstr(line2,vmSize);
+              //printf("%s %s", memstr, memstr2);   //-----Test
+
+              //strstr : recherche la première occurence d'une sous-chaine dans une chaine principale et
+              //renvoi un pointeur visant la première occurence  si trouvé sinon renvoi NULL
+
+              if (memstr != NULL){  /* Found our line */
+                  memstr += offset;
+                  memstr2 += offset2;
+                  while ((*memstr == ' ' || *memstr == '\t') && (*memstr2 == ' ' || *memstr2 == '\t')) {
+                      if ((*memstr == '\0') && (*memstr2 == '\0')) {
+                          fprintf(stderr, "unexpected error in %s.\n", path);
+                          exit(1);
+                      }
+                      ++memstr;
+                      ++memstr2;
+                  }
+                  printf("PID %s: %s \t %s", piddir->d_name, memstr, memstr2);
+                  break;
+              }
+          }
+
+          actuel = actuel->suivant;
+
+    }
+
+fclose(pidmemfile);
+}
 
 int main()
 {
