@@ -77,5 +77,9 @@ void afficherListe(Liste *liste){
 int main()
 {
 
+  Liste *maListe = initialisation();
+  insertion(maListe, "VmPeak");
+  //afficherListe(maListe);
+
 return 0;
 }
