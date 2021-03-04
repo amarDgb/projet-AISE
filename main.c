@@ -34,6 +34,19 @@ Liste *initialisation(){
   return liste;
 };
 
+// 2- Ajout d'un element à la Liste (au début)
+void insertion(Liste *liste, char *nvElement){
+  /*Creation du nouvel élément*/
+  Element *nouveau = malloc(sizeof(*nouveau));
+  if(liste == NULL || nouveau == NULL){//On vérifie si les allocations dynamiques en fonctionner
+    exit(EXIT_FAILURE); //En cas d'erreur en arrête le programme en faisant appel à exit
+  }
+  strcat(nouveau->elem, nvElement);
+
+  /*Insertion de l'élément au début de la liste*/
+  nouveau->suivant = liste->premier;
+  liste->premier = nouveau;
+};
 int main()
 {
 
