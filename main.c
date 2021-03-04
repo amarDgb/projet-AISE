@@ -166,5 +166,28 @@ int main()
   insertion(maListe, "VmPeak");
   //afficherListe(maListe);
 
+  DIR *procdir;
+     struct dirent *procentry;
+
+     procdir = opendir("/proc");
+     if (procdir == NULL) {
+         perror("Could not open directory /proc");
+         return 1;
+     }
+
+     for(;;) {
+         procentry = readdir(procdir);
+         if (procentry == NULL) {
+             break;
+         }
+          // * if the name of an entry in /proc has only digits, then
+          // * it is a subdirectory containg info about a process,
+          // * while the name itself is the PID of the process.
+
+         if (!fnmatch("[1-9]*", procentry->d_name, 0)) {
+             processdir(procentry,maListe);
+         }
+     }
+
 return 0;
 }
