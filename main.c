@@ -4,11 +4,9 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
-#include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <stdarg.h>
-#include <string.h>
 #include <unistd.h>
 #include <signal.h>
 #include <fcntl.h>
@@ -16,6 +14,25 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+void jsonout (int pid, int ppid, char state){
+
+    /* open file for writing */
+    FILE *fd = fopen("info.json","a+");
+
+    if(fd == NULL){
+      perror("fopen");
+    }
+
+
+    fprintf (fd, "{\n \t\"%ld\" : {\n",pid);    /* print header to file */
+
+    fprintf (fd, "\t \t\"PPID\" : \" %ld \",\n",ppid);
+    fprintf (fd, "\t \t\"State\" : \" %c \" \n",state);
+
+    fprintf (fd, "\t \t }\n}\n\n");     /* print closing tag */
+
+    fclose (fd);
+}
 
 int main(int argc, char** argv)
 {
@@ -41,6 +58,8 @@ printf("PID \t PPID       Etat \t  command \t\n\n");
    // if no cmd line use executable filename
    printf("[%s]\n", proc_info.cmd);
   }
+
+  jsonout(proc_info.tid,proc_info.ppid,proc_info.state);
 
 }
 
