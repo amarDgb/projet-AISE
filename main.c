@@ -1,3 +1,25 @@
+#if defined (WIN32)
+ #include <winsock2.h>
+ typedef int socklen_t;
+#elif defined (linux)
+ #include <sys/types.h>
+ #include <sys/socket.h>
+ #include <netinet/in.h>
+ #include <arpa/inet.h>
+ #include <unistd.h>
+ #define INVALID_SOCKET -1
+ #define SOCKET_ERROR -1
+ #define closesocket(s) close(s)
+ typedef int SOCKET;
+ typedef struct sockaddr_in SOCKADDR_IN;
+ typedef struct sockaddr SOCKADDR;
+#endif
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#define PORT 1024
+
 #include <stdio.h>
 #include <string.h>
 #include <proc/readproc.h>
@@ -13,6 +35,8 @@
 #include <sys/dir.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+
+#include "fichier.h"
 
 void jsonout (int pid, int ppid,long priority, long nice, unsigned long vm_size,char state){
 
@@ -44,9 +68,71 @@ void jsonout (int pid, int ppid,long priority, long nice, unsigned long vm_size,
 
 int main(int argc, char** argv)
 {
+
+#if defined (WIN32)
+ WSADATA WSAData;
+ int erreur = WSAStartup(MAKEWORD(2,2), &WSAData);
+ #else
+ int erreur = 0;
+ #endif
+
+
  // fillarg used for cmdline
  // fillstat used for cmd
  while(1){
+
+ buffer *buff = malloc(1024*1024);
+
+ SOCKET sock;
+ SOCKADDR_IN sin;
+ SOCKET csock;
+ SOCKADDR_IN csin;
+
+ //char *buffer = malloc(1024*1024);
+
+
+ socklen_t recsize = sizeof(csin);
+ int sock_err;
+
+ /* Si les sockets Windows fonctionnent */
+ if(!erreur)
+ {
+ sock = socket(AF_INET, SOCK_STREAM, 0);
+
+ /* Si la socket est valide */
+ if(sock != INVALID_SOCKET)
+ {
+ printf("La socket %d est maintenant ouverte en mode TCP/IP\n", sock);
+
+ /* Configuration */
+ sin.sin_addr.s_addr = htonl(INADDR_ANY); /* Adresse IP automati
+que */
+ sin.sin_family = AF_INET; /* Protocole familial (IP) */
+ sin.sin_port = htons(PORT); /* Listage du port */
+ sock_err = bind(sock, (SOCKADDR*)&sin, sizeof(sin));
+ /* Si la socket fonctionne */
+ if(sock_err != SOCKET_ERROR)
+ {
+ /* Démarrage du listage (mode server) */
+ sock_err = listen(sock, 5);
+ printf("Listage du port %d...\n", PORT);
+
+ /* Si la socket fonctionne */
+ if(sock_err != SOCKET_ERROR)
+ {
+ /* Attente pendant laquelle le client se connecte */
+ printf("Patientez pendant que le client se connecte sur le port %d...\
+n", PORT);
+
+ csock = accept(sock, (SOCKADDR*)&csin, &recsize);
+ printf("Un client se connecte avec la socket %d de %s:%d\n", csock
+, inet_ntoa(csin.sin_addr), htons(csin.sin_port));
+
+
+
+
+buff->last = 0;
+
  PROCTAB* proc = openproc(PROC_FILLARG | PROC_FILLSTAT | PROC_FILLMEM | PROC_FILLSTATUS | PROC_FILLUSR);
 
  proc_t proc_info;
@@ -55,6 +141,13 @@ int main(int argc, char** argv)
  memset(&proc_info, 0, sizeof(proc_info));
 printf("PID \t PPID \t USER \t PR \t NI \t VIRT \t Etat \t\n\n");
  while (readproc(proc, &proc_info) != NULL) {
+
+ buff->tid = proc_info.tid;
+ buff->ppid = proc_info.ppid;
+ //strcat(buff->euser, proc_info.euser);
+ buff->priority = proc_info.priority;
+ buff->nice = proc_info.nice;
+ buff->vm_size = proc_info.vm_size;
   
 printf("%-10d \t %-10d \t %s \t %ld \t  %ld \t %lu  \t %c \t", proc_info.tid, proc_info.ppid,proc_info.euser, proc_info.priority,proc_info.nice, proc_info.vm_size, proc_info.state);
 if (proc_info.cmdline != NULL) {
@@ -70,13 +163,32 @@ if (proc_info.cmdline != NULL) {
  //strcat(buff->cmd, proc_info.cmd);
 }
 
- 
+ sock_err = send(csock, buff, sizeof(buff), 0);
 
 }
 
 
  closeproc(proc);
-sleep(3);
+shutdown(csock, 2);
+ }
+ }
+
+ /* Fermeture de la socket */
+ printf("Fermeture de la socket...\n");
+ closesocket(sock);
+ printf("Fermeture du serveur terminee\n");
+}
+
+
+
+ #if defined (WIN32)
+ WSACleanup();
+ #endif
+ }
+
+ /* On attend que l'utilisateur tape sur une touche, puis on ferme */
+ getchar();
+ sleep(3);
 }
  return 0;
 }
