@@ -7,14 +7,14 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <stdarg.h>
-#include <unistd.h>
+#include <unistd.h> //sleep
 #include <signal.h>
 #include <fcntl.h>
 #include <sys/dir.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 
-void jsonout (int pid, int ppid, char state){
+void jsonout (int pid, int ppid,long priority, long nice, unsigned long vm_size,char state){
 
     /* open file for writing */
     FILE *fd = fopen("info.json","a+");
@@ -26,8 +26,16 @@ void jsonout (int pid, int ppid, char state){
 
     fprintf (fd, "{\n \t\"%ld\" : {\n",pid);    /* print header to file */
 
-    fprintf (fd, "\t \t\"PPID\" : \" %ld \",\n",ppid);
+    fprintf (fd, "\t \t\"Ppid\" : \" %ld \",\n",ppid);
+    //fprintf (fd, "\t \t\"User\" : \" %ld \",\n",user);
+
+
+    fprintf (fd, "\t \t\"Priority\" : \" %ld \" \n",priority);
+    fprintf (fd, "\t \t\"Nice\" : \" %ld \" \n",nice);
+    fprintf (fd, "\t \t\"Vm_size\" : \" %lu \" \n",vm_size);
+
     fprintf (fd, "\t \t\"State\" : \" %c \" \n",state);
+    //fprintf (fd, "\t \t\"COM\" : \" %u \" \n",com);
 
     fprintf (fd, "\t \t }\n}\n\n");     /* print closing tag */
 
@@ -38,34 +46,38 @@ int main(int argc, char** argv)
 {
  // fillarg used for cmdline
  // fillstat used for cmd
- PROCTAB* proc = openproc(PROC_FILLARG | PROC_FILLSTAT);
+ while(1){
+ PROCTAB* proc = openproc(PROC_FILLARG | PROC_FILLSTAT | PROC_FILLMEM | PROC_FILLSTATUS | PROC_FILLUSR);
 
  proc_t proc_info;
 
  // zero out the allocated proc_info memory
  memset(&proc_info, 0, sizeof(proc_info));
-printf("PID \t PPID       Etat \t  command \t\n\n");
+printf("PID \t PPID \t USER \t PR \t NI \t VIRT \t Etat \t\n\n");
  while (readproc(proc, &proc_info) != NULL) {
-  printf("%-10d %-10d", proc_info.tid, proc_info.ppid);
+  
+printf("%-10d \t %-10d \t %s \t %ld \t  %ld \t %lu  \t %c \t", proc_info.tid, proc_info.ppid,proc_info.euser, proc_info.priority,proc_info.nice, proc_info.vm_size, proc_info.state);
+if (proc_info.cmdline != NULL) {
+ // print full cmd line if available
+ printf("%s\n", *proc_info.cmdline);
+ jsonout(proc_info.tid, proc_info.ppid, proc_info.priority,proc_info.nice, proc_info.vm_size, proc_info.state);
+ //strcat(buff->cmd, proc_info.cmdline);
+ //sprintf(buff->cmd, "%s", proc_info.cmdline);
+} else {
+ // if no cmd line use executable filename
+ printf("[%s]\n", proc_info.cmd);
+ jsonout(proc_info.tid, proc_info.ppid, proc_info.priority,proc_info.nice, proc_info.vm_size, proc_info.state);
+ //strcat(buff->cmd, proc_info.cmd);
+}
 
-
-  printf("    %c \t", proc_info.state);
-
-  if (proc_info.cmdline != NULL) {
-   // print full cmd line if available
-   printf("%s\n", *proc_info.cmdline);
-  } else {
-   // if no cmd line use executable filename
-   printf("[%s]\n", proc_info.cmd);
-  }
-
-  jsonout(proc_info.tid,proc_info.ppid,proc_info.state);
+ 
 
 }
 
 
  closeproc(proc);
-
+sleep(3);
+}
  return 0;
 }
 
