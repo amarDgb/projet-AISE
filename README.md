@@ -18,7 +18,7 @@ la communication est faite avec les sockets.
   Compilation: executer : make
 
 Version envoi avec structure :
- Compilation : gcc -o main main.c -lprocs
+ Compilation : gcc -o main main.c -lprocps
                gcc -o client client.c
 
  Execution : ./main
